@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>FodoGO — สั่งอาหาร</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <div class="nav-brand">
+    <div class="nav-logo">🍜</div>
+    <span id="shop-name">FodoGO</span>
+  </div>
+  <div class="nav-links">
+    <a href="index.html"  class="nav-link active">🏠 หน้าหลัก</a>
+    <a href="orders.html" class="nav-link">📋 ออเดอร์</a>
+  </div>
+  <div class="nav-right">
+    <button class="cart-pill" id="cart-pill" onclick="toggleDrawer()">
+      🛒 ตะกร้า
+      <span class="cart-count hidden" id="cart-badge">0</span>
+    </button>
+    <div class="nav-user">
+      <div class="nav-avatar" id="uavatar">?</div>
+      <span class="nav-uname" id="uname">Loading…</span>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="page" style="padding-bottom:0">
+  <div class="menu-hero">
+    <div class="wrap">
+      <h1>สั่งอาหารออนไลน์ 🍽️</h1>
+      <p id="shop-sub">เลือกเมนูที่ชอบ สั่งง่าย ส่งไว</p>
+    </div>
+  </div>
+
+  <!-- CAT BAR -->
+  <div class="wrap">
+    <div id="cat-bar" class="cat-bar"></div>
+  </div>
+
+  <!-- FOOD GRID -->
+  <div class="wrap">
+    <div id="food-grid" class="food-grid"></div>
+  </div>
+</div>
+
+<!-- CART DRAWER -->
+<div id="cart-drawer" class="cart-drawer">
+  <div style="position:relative">
+    <div class="cart-handle-bar"></div>
+  </div>
+  <div class="cart-handle" onclick="toggleDrawer()">
+    <div class="cart-handle-left">
+      <span class="cart-handle-title">🛒 ตะกร้าสินค้า</span>
+      <span class="badge badge-brand" id="cart-cnt">0 รายการ</span>
+    </div>
+    <span id="drawer-arrow">▲</span>
+  </div>
+
+  <div id="cart-empty" class="empty-state">
+    <div class="empty-ico">🛒</div>
+    <h3>ตะกร้าว่างเปล่า</h3>
+    <p>เลือกเมนูที่ชอบได้เลย!</p>
+  </div>
+
+  <div id="cart-body" class="cart-body"></div>
+
+  <div id="cart-foot" class="cart-footer-wrap hidden">
+    <div class="cart-total-row">
+      <span>รวมทั้งหมด</span>
+      <span class="cart-total-price" id="cart-total">฿0</span>
+    </div>
+    <button class="btn btn-primary btn-lg btn-block" onclick="openCheckout()">✅ สั่งอาหาร</button>
+  </div>
+</div>
+
+<!-- MODAL: รายละเอียดเมนู -->
+<div class="modal-bg" id="modal-detail">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 class="modal-title" id="det-name">ชื่อเมนู</h2>
+      <div class="modal-close" onclick="closeModal('modal-detail')">✕</div>
+    </div>
+    <div id="det-img" style="margin-bottom:14px;border-radius:var(--r-md);overflow:hidden;background:var(--bg-overlay);min-height:120px;display:flex;align-items:center;justify-content:center"></div>
+    <p id="det-desc" style="font-size:0.83rem;color:var(--tx-secondary);margin-bottom:10px;line-height:1.7"></p>
+    <div id="det-price" style="font-size:1.2rem;font-weight:700;color:var(--brand);margin-bottom:18px">฿0</div>
+    <button class="btn btn-primary btn-block" id="det-add">+ เพิ่มลงตะกร้า</button>
+  </div>
+</div>
+
+<!-- MODAL: Checkout -->
+<div class="modal-bg" id="modal-checkout">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 class="modal-title">🛒 ยืนยันคำสั่งซื้อ</h2>
+      <div class="modal-close" onclick="closeModal('modal-checkout')">✕</div>
+    </div>
+    <div id="co-sum" style="display:flex;flex-direction:column;gap:7px;margin-bottom:18px"></div>
+    <div class="form-group">
+      <label class="form-label">📍 ที่อยู่จัดส่ง <span style="color:var(--err)">*</span></label>
+      <textarea id="co-addr" class="form-ctrl" placeholder="บ้านเลขที่, ตึก, ห้อง…"></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">📝 หมายเหตุ</label>
+      <textarea id="co-note" class="form-ctrl" placeholder="ไม่ใส่ผัก, เผ็ดน้อย…" style="min-height:60px"></textarea>
+    </div>
+    <button class="btn btn-primary btn-lg btn-block" id="co-btn" onclick="submitOrder()">✅ ยืนยันสั่งอาหาร</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toasts" class="toast-box"></div>
+
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="config.js"></script>
+<script src="script.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("shop-name").textContent = CFG.SHOP_NAME;
+    document.getElementById("shop-sub").textContent  = CFG.SHOP_SUB;
+  });
+  // Arrow toggle
+  const _orig = window.toggleDrawer;
+  window.toggleDrawer = function() {
+    _orig();
+    const a = document.getElementById("drawer-arrow");
+    if (a) a.textContent = DRAWER_OPEN ? "▼" : "▲";
+  };
+</script>
+</body>
+</html>

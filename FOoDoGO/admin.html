@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>FodoGO — Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <div class="flex items-c gap-2">
+    <button class="btn btn-ghost btn-sm" onclick="toggleSidebar()" style="padding:6px 10px">☰</button>
+    <div class="nav-brand"><div class="nav-logo">⚙️</div><span>Admin Panel</span></div>
+  </div>
+  <div class="nav-right">
+    <a href="index.html" class="btn btn-ghost btn-sm">← หน้าลูกค้า</a>
+    <div class="nav-user">
+      <div class="nav-avatar" id="a-uavatar">A</div>
+      <span class="nav-uname" id="a-uname">Admin</span>
+    </div>
+  </div>
+</nav>
+
+<!-- LAYOUT -->
+<div class="admin-shell">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-section">
+      <div class="sb-label">จัดการ</div>
+      <a class="sb-link active" data-tab="menu" href="#">
+        <span class="ico">🍽️</span> เมนูอาหาร
+      </a>
+      <a class="sb-link" data-tab="cats" href="#">
+        <span class="ico">📂</span> หมวดหมู่
+      </a>
+      <a class="sb-link" data-tab="orders" href="#">
+        <span class="ico">📋</span> คำสั่งซื้อ
+      </a>
+    </div>
+    <div class="sb-section">
+      <div class="sb-label">ระบบ</div>
+      <a class="sb-link" data-tab="admins" href="#">
+        <span class="ico">👥</span> จัดการแอดมิน
+      </a>
+      <a class="sb-link" href="dashboard.html">
+        <span class="ico">📊</span> Dashboard
+      </a>
+      <a class="sb-link" href="index.html">
+        <span class="ico">🏠</span> หน้าลูกค้า
+      </a>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="admin-main">
+
+    <!-- ── TAB: เมนู ── -->
+    <div class="a-tab" data-tab="menu">
+      <div class="page-hd">
+        <div>
+          <h1 class="page-title">🍽️ จัดการเมนู</h1>
+          <p class="page-sub">เพิ่ม แก้ไข จัดการเมนูทั้งหมด</p>
+        </div>
+        <div class="flex gap-2">
+          <button class="btn btn-ghost" onclick="loadMenu()">🔄</button>
+          <button class="btn btn-primary" onclick="openAddMenu()">+ เพิ่มเมนู</button>
+        </div>
+      </div>
+      <div class="search-bar mb-4" style="max-width:380px">
+        <span class="search-ico">🔍</span>
+        <input type="text" placeholder="ค้นหาเมนู…" oninput="paintMenu(this.value)">
+      </div>
+      <div id="mgrid" class="mgrid"></div>
+    </div>
+
+    <!-- ── TAB: หมวดหมู่ ── -->
+    <div class="a-tab hidden" data-tab="cats">
+      <div class="page-hd">
+        <div>
+          <h1 class="page-title">📂 หมวดหมู่</h1>
+          <p class="page-sub">จัดการหมวดหมู่อาหาร</p>
+        </div>
+        <button class="btn btn-primary" onclick="openAModal('modal-cat')">+ เพิ่มหมวดหมู่</button>
+      </div>
+      <div id="cat-list"></div>
+    </div>
+
+    <!-- ── TAB: ออเดอร์ ── -->
+    <div class="a-tab hidden" data-tab="orders">
+      <div class="page-hd">
+        <div>
+          <h1 class="page-title">📋 คำสั่งซื้อ</h1>
+          <p class="page-sub">ดูและอัปเดตสถานะ</p>
+        </div>
+        <button class="btn btn-ghost" onclick="loadOrders()">🔄 รีโหลด</button>
+      </div>
+      <div class="filter-strip">
+        <button class="filter-chip on" data-st="all"       onclick="filterOrders('all')">ทั้งหมด</button>
+        <button class="filter-chip"    data-st="pending"   onclick="filterOrders('pending')">⏳ รอ</button>
+        <button class="filter-chip"    data-st="confirmed" onclick="filterOrders('confirmed')">✅ ยืนยัน</button>
+        <button class="filter-chip"    data-st="cooking"   onclick="filterOrders('cooking')">🍳 ทำ</button>
+        <button class="filter-chip"    data-st="ready"     onclick="filterOrders('ready')">🎉 พร้อม</button>
+        <button class="filter-chip"    data-st="delivered" onclick="filterOrders('delivered')">📦 ส่งแล้ว</button>
+      </div>
+      <div class="card" style="padding:0">
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="padding-left:18px">หมายเลข</th>
+                <th>ลูกค้า</th><th>เวลา</th><th>ยอด</th><th>สถานะ</th><th>อัปเดต</th>
+              </tr>
+            </thead>
+            <tbody id="ord-tbody">
+              <tr><td colspan="6" style="text-align:center;padding:40px;color:var(--tx-muted)">เลือกแท็บ "คำสั่งซื้อ"</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TAB: จัดการแอดมิน ── -->
+    <div class="a-tab hidden" data-tab="admins">
+      <div class="page-hd">
+        <div>
+          <h1 class="page-title">👥 จัดการแอดมิน</h1>
+          <p class="page-sub">เพิ่ม/ลบสิทธิ์แอดมินผ่าน LINE User ID</p>
+        </div>
+        <button class="btn btn-primary" onclick="openAModal('modal-admin')">+ เพิ่มแอดมิน</button>
+      </div>
+
+      <!-- คำแนะนำ -->
+      <div class="card mb-4" style="border-color:var(--line-brand);background:var(--brand-muted)">
+        <h3 style="font-size:0.88rem;font-weight:700;margin-bottom:8px;color:var(--brand)">💡 วิธีหา LINE User ID</h3>
+        <p style="font-size:0.8rem;color:var(--tx-secondary);line-height:1.7">
+          1. เปิดหน้าเว็บ <code style="background:var(--bg-overlay);padding:1px 6px;border-radius:4px">index.html</code> บน LINE<br>
+          2. เปิด DevTools → Console พิมพ์: <code style="background:var(--bg-overlay);padding:1px 6px;border-radius:4px">liff.getProfile().then(p=>console.log(p.userId))</code><br>
+          3. Copy userId ที่ได้ (ขึ้นต้นด้วย U) → มาใส่ในฟอร์มด้านล่าง
+        </p>
+      </div>
+
+      <div id="admin-list"></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- MODAL: เพิ่ม/แก้ไขเมนู -->
+<div class="modal-bg" id="modal-menu">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 class="modal-title" id="mform-title">เพิ่มเมนู</h2>
+      <div class="modal-close" onclick="closeAModal('modal-menu')">✕</div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">ชื่อเมนู *</label>
+        <input type="text" id="mf-name" class="form-ctrl" placeholder="เช่น ข้าวผัดหมู">
+      </div>
+      <div class="form-group">
+        <label class="form-label">ราคา (บาท) *</label>
+        <input type="number" id="mf-price" class="form-ctrl" placeholder="60" min="0">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">หมวดหมู่</label>
+        <select id="mf-cat" class="form-ctrl"><option value="">-- เลือก --</option></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">สถานะ</label>
+        <select id="mf-status" class="form-ctrl">
+          <option value="available">✅ พร้อมขาย</option>
+          <option value="unavailable">❌ หมดชั่วคราว</option>
+          <option value="hidden">👁 ซ่อน</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">URL รูปภาพ</label>
+      <input type="url" id="mf-image" class="form-ctrl" placeholder="https://…">
+    </div>
+    <div class="form-group">
+      <label class="form-label">คำอธิบาย</label>
+      <textarea id="mf-desc" class="form-ctrl" placeholder="อธิบายเมนูสั้น ๆ…"></textarea>
+    </div>
+    <button class="btn btn-primary btn-block" id="mf-save" onclick="saveMenu()">💾 บันทึก</button>
+  </div>
+</div>
+
+<!-- MODAL: เพิ่มหมวดหมู่ -->
+<div class="modal-bg" id="modal-cat">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 class="modal-title">📂 เพิ่มหมวดหมู่</h2>
+      <div class="modal-close" onclick="closeAModal('modal-cat')">✕</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">ชื่อหมวดหมู่ *</label>
+      <input type="text" id="cf-name" class="form-ctrl" placeholder="เช่น ข้าวจานเดียว">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Emoji ไอคอน</label>
+      <input type="text" id="cf-icon" class="form-ctrl" placeholder="🍚" maxlength="4">
+    </div>
+    <button class="btn btn-primary btn-block" id="cf-save" onclick="saveCat()">💾 บันทึก</button>
+  </div>
+</div>
+
+<!-- MODAL: เพิ่มแอดมิน -->
+<div class="modal-bg" id="modal-admin">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 class="modal-title">👤 เพิ่มแอดมิน</h2>
+      <div class="modal-close" onclick="closeAModal('modal-admin')">✕</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">LINE User ID *</label>
+      <input type="text" id="af-uid" class="form-ctrl" placeholder="Uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx">
+      <p style="font-size:0.74rem;color:var(--tx-muted);margin-top:5px">ขึ้นต้นด้วย U ตามด้วยตัวเลขและตัวอักษร 32 หลัก</p>
+    </div>
+    <div class="form-group">
+      <label class="form-label">ชื่อ (เพื่อแสดงผล) *</label>
+      <input type="text" id="af-name" class="form-ctrl" placeholder="เช่น คุณสมชาย">
+    </div>
+    <button class="btn btn-primary btn-block" id="af-save" onclick="addAdmin()">✅ เพิ่มแอดมิน</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toasts" class="toast-box"></div>
+
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="config.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>

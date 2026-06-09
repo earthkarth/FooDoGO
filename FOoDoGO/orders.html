@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>FodoGO — ออเดอร์ของฉัน</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="nav-brand"><div class="nav-logo">🍜</div><span>FodoGO</span></div>
+  <div class="nav-links">
+    <a href="index.html"  class="nav-link">🏠 หน้าหลัก</a>
+    <a href="orders.html" class="nav-link active">📋 ออเดอร์</a>
+  </div>
+  <div class="nav-user">
+    <div class="nav-avatar" id="uavatar">?</div>
+    <span class="nav-uname" id="uname">Loading…</span>
+  </div>
+</nav>
+
+<div class="page">
+  <div class="wrap" style="padding-top:28px;padding-bottom:60px">
+
+    <div class="page-hd">
+      <div>
+        <h1 class="page-title">📋 ออเดอร์ของฉัน</h1>
+        <p class="page-sub">ติดตามสถานะการสั่งอาหาร</p>
+      </div>
+      <button class="btn btn-ghost" onclick="loadOrders()">🔄 รีโหลด</button>
+    </div>
+
+    <div class="filter-strip">
+      <button class="filter-chip on" data-st="all"       onclick="filterOrds('all')">ทั้งหมด</button>
+      <button class="filter-chip"    data-st="pending"   onclick="filterOrds('pending')">⏳ รอ</button>
+      <button class="filter-chip"    data-st="cooking"   onclick="filterOrds('cooking')">🍳 กำลังทำ</button>
+      <button class="filter-chip"    data-st="ready"     onclick="filterOrds('ready')">🎉 พร้อมส่ง</button>
+      <button class="filter-chip"    data-st="delivered" onclick="filterOrds('delivered')">📦 ส่งแล้ว</button>
+    </div>
+
+    <div id="ord-list"></div>
+
+  </div>
+</div>
+
+<!-- MODAL: รายละเอียดออเดอร์ -->
+<div class="modal-bg" id="modal-ord">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 class="modal-title" id="od-title">ออเดอร์</h2>
+      <div class="modal-close" onclick="document.getElementById('modal-ord').classList.remove('open')">✕</div>
+    </div>
+    <div class="steps" id="od-steps"></div>
+    <div id="od-items" style="margin:18px 0;display:flex;flex-direction:column;gap:7px"></div>
+    <div style="background:var(--bg-overlay);border-radius:var(--r-md);padding:14px;margin-bottom:16px">
+      <div class="order-line mb-2"><span class="n">ที่อยู่</span><span id="od-addr" style="font-size:0.78rem;max-width:200px;text-align:right"></span></div>
+      <div class="order-line mb-2"><span class="n">หมายเหตุ</span><span id="od-note" style="font-size:0.78rem;color:var(--tx-muted)"></span></div>
+      <div class="order-line" style="border-top:1px solid var(--line);padding-top:10px">
+        <span class="fw-7">รวม</span>
+        <span class="fw-7 text-brand" id="od-total">฿0</span>
+      </div>
+    </div>
+    <a href="index.html" class="btn btn-primary btn-block">🍽️ สั่งอีกครั้ง</a>
+  </div>
+</div>
+
+<div id="toasts" class="toast-box"></div>
+
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="config.js"></script>
+<script>
+const STEPS = [
+  { key:"pending",   ico:"⏳", lbl:"รอยืนยัน" },
+  { key:"confirmed", ico:"✅", lbl:"ยืนยัน" },
+  { key:"cooking",   ico:"🍳", lbl:"กำลังทำ" },
+  { key:"ready",     ico:"🎉", lbl:"พร้อมส่ง" },
+  { key:"delivered", ico:"📦", lbl:"ส่งแล้ว" },
+];
+
+let MY_ORDERS = [];
+let ME_ID = null;
+
+document.addEventListener("DOMContentLoaded", async () => {
+  await initLiff();
+  await loadOrders();
+});
+
+async function initLiff() {
+  try {
+    await liff.init({ liffId: CFG.LIFF_ID });
+    if (!liff.isLoggedIn()) { liff.login({ redirectUri: location.href }); return; }
+    const p = await liff.getProfile();
+    ME_ID = p.userId;
+    document.getElementById("uname").textContent   = p.displayName;
+    document.getElementById("uavatar").innerHTML   = `<img src="${p.pictureUrl}" alt="">`;
+  } catch (e) { console.warn(e); }
+}
+
+async function loadOrders() {
+  const list = document.getElementById("ord-list");
+  list.innerHTML = `<div class="loading-state"><div class="spinner"></div><span>กำลังโหลด…</span></div>`;
+  try {
+    const r = await fetch(`${CFG.GAS_URL}?action=getMyOrders&userId=${encodeURIComponent(ME_ID||"")}`);
+    const d = await r.json();
+    MY_ORDERS = d.orders || [];
+    paintOrds(MY_ORDERS);
+  } catch {
+    list.innerHTML = `<div class="empty-state"><div class="empty-ico">❌</div><h3>โหลดไม่ได้</h3>
+      <button class="btn btn-primary mt-2" onclick="loadOrders()">ลองใหม่</button></div>`;
+  }
+}
+
+function paintOrds(ords) {
+  const list = document.getElementById("ord-list");
+  if (!ords.length) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-ico">🛒</div><h3>ยังไม่มีออเดอร์</h3>
+      <a href="index.html" class="btn btn-primary mt-2">🍽️ ดูเมนู</a></div>`;
+    return;
+  }
+  list.innerHTML = ords.map(o => {
+    let items = []; try { items = JSON.parse(o.items||"[]"); } catch {}
+    const si = STEPS.findIndex(s => s.key === o.status);
+    const stepsHtml = STEPS.filter(s => s.key !== "confirmed").map(s => {
+      const idx  = STEPS.findIndex(x => x.key === s.key);
+      const done = si > idx || o.status === "delivered";
+      const act  = si === idx;
+      return `<div class="step ${done?"done":""} ${act?"active":""}">
+        <div class="step-dot">${s.ico}</div>
+        <div class="step-lbl">${s.lbl}</div>
+      </div>`;
+    }).join("");
+    return `
+      <div class="order-card" onclick="openDetail('${o.orderId}')">
+        <div class="order-card-top">
+          <div><div class="order-num">#${o.orderId}</div><div class="order-ts">${fmtDate(o.timestamp)}</div></div>
+          ${sBadge(o.status)}
+        </div>
+        <div class="steps">${stepsHtml}</div>
+        <div class="order-items-prev">
+          ${items.slice(0,3).map(i=>`<div class="order-line"><span class="n">${i.name} × ${i.qty}</span><span class="p">฿${(i.price*i.qty).toLocaleString()}</span></div>`).join("")}
+          ${items.length>3?`<div class="text-xs text-muted mt-2">+${items.length-3} รายการ</div>`:""}
+        </div>
+        <div class="order-card-foot">
+          <span class="text-sm text-muted">ยอดรวม</span>
+          <span class="order-total">฿${(+o.total).toLocaleString()}</span>
+        </div>
+      </div>`;
+  }).join("");
+}
+
+function filterOrds(st) {
+  document.querySelectorAll(".filter-chip").forEach(b => b.classList.toggle("on", b.dataset.st === st));
+  paintOrds(st === "all" ? MY_ORDERS : MY_ORDERS.filter(o => o.status === st));
+}
+
+function openDetail(id) {
+  const o = MY_ORDERS.find(x => x.orderId === id);
+  if (!o) return;
+  let items = []; try { items = JSON.parse(o.items||"[]"); } catch {}
+  document.getElementById("od-title").textContent  = `ออเดอร์ #${o.orderId}`;
+  document.getElementById("od-total").textContent  = `฿${(+o.total).toLocaleString()}`;
+  document.getElementById("od-addr").textContent   = o.address || "-";
+  document.getElementById("od-note").textContent   = o.note    || "-";
+  const si = STEPS.findIndex(s => s.key === o.status);
+  document.getElementById("od-steps").innerHTML = STEPS.map((s,i) => `
+    <div class="step ${si>i||o.status==="delivered"?"done":""} ${si===i?"active":""}">
+      <div class="step-dot">${s.ico}</div><div class="step-lbl">${s.lbl}</div>
+    </div>`).join("");
+  document.getElementById("od-items").innerHTML = items.map(i => `
+    <div class="order-line"><span class="n">${i.name} × ${i.qty}</span><span class="p fw-7">฿${(i.price*i.qty).toLocaleString()}</span></div>`).join("");
+  document.getElementById("modal-ord").classList.add("open");
+}
+
+document.addEventListener("click", e => { if (e.target.classList.contains("modal-bg")) e.target.classList.remove("open"); });
+
+function sBadge(s) {
+  const m = { pending:["badge-warn","⏳ รอ"], confirmed:["badge-info","✅ ยืนยัน"],
+    cooking:["badge-warn","🍳 ทำ"], ready:["badge-ok","🎉 พร้อม"],
+    delivered:["badge-muted","📦 ส่งแล้ว"], cancelled:["badge-err","❌ ยกเลิก"] };
+  const [c,l] = m[s]||["badge-muted",s];
+  return `<span class="badge ${c}">${l}</span>`;
+}
+function fmtDate(ts) {
+  if (!ts) return "-";
+  try { const d=new Date(ts); return d.toLocaleDateString("th-TH",{day:"2-digit",month:"short"})+" "+d.toLocaleTimeString("th-TH",{hour:"2-digit",minute:"2-digit"}); }
+  catch { return ts; }
+}
+</script>
+</body>
+</html>

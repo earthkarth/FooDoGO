@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* Dashboard-specific extras */
+    .donut-wrap {
+      position: relative;
+      width: 160px; height: 160px;
+      margin: 0 auto;
+    }
+    .donut-wrap canvas { display: block; }
+    .donut-center {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .donut-center-value {
+      font-family: var(--font-head);
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      line-height: 1;
+    }
+    .donut-center-label {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+    }
+
+    .revenue-bar-wrap { display: flex; flex-direction: column; gap: 10px; }
+    .revenue-bar-row { display: flex; align-items: center; gap: 10px; }
+    .revenue-bar-label { width: 60px; font-size: 0.75rem; color: var(--text-secondary); flex-shrink: 0; text-align: right; }
+    .revenue-bar-track { flex: 1; height: 10px; background: var(--border); border-radius: 99px; overflow: hidden; }
+    .revenue-bar-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent)); border-radius: 99px; transition: width 1s ease; }
+    .revenue-bar-val { width: 70px; font-size: 0.75rem; font-weight: 600; color: var(--text-primary); flex-shrink: 0; }
+
+    .period-btns { display: flex; gap: 6px; }
+    .period-btn { padding: 5px 12px; border-radius: 99px; font-size: 0.75rem; font-weight: 600; background: var(--bg); border: 1.5px solid var(--border-strong); color: var(--text-secondary); cursor: pointer; transition: var(--transition); }
+    .period-btn.active, .period-btn:hover { background: var(--primary); color: white; border-color: var(--primary); }
+  </style>
+</head>
+<body>
+
+<!-- ── Navbar ── -->
+<nav class="navbar">
+  <div class="navbar-brand">
+    <div class="logo-icon">📊</div>
+    <span>Dashboard</span>
+  </div>
+
+  <div class="navbar-nav">
+    <a href="admin.html"    class="nav-link">⚙️ Admin</a>
+    <a href="orders.html"   class="nav-link">📋 Orders</a>
+    <a href="index.html"    class="nav-link">🏠 หน้าลูกค้า</a>
+    <a href="dashboard.html" class="nav-link active">📊 Dashboard</a>
+  </div>
+
+  <div class="navbar-user">
+    <div class="user-avatar" id="dash-avatar">A</div>
+    <span class="user-name" id="dash-name">Admin</span>
+  </div>
+</nav>
+
+<!-- ── Page ── -->
+<div class="page-wrapper">
+  <div class="container" style="padding-top:28px;padding-bottom:60px">
+
+    <!-- Header -->
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">📊 ภาพรวมร้านอาหาร</h1>
+        <p class="page-subtitle" id="dash-date">วันนี้</p>
+      </div>
+      <div class="period-btns">
+        <button class="period-btn active" onclick="setPeriod('today',   this)">วันนี้</button>
+        <button class="period-btn"        onclick="setPeriod('week',    this)">7 วัน</button>
+        <button class="period-btn"        onclick="setPeriod('month',   this)">30 วัน</button>
+      </div>
+    </div>
+
+    <!-- ── Stat Cards ── -->
+    <div class="stat-cards" id="stat-cards">
+      <div class="stat-card">
+        <div class="stat-icon orange">💰</div>
+        <div class="stat-info">
+          <div class="stat-value" id="stat-revenue">฿0</div>
+          <div class="stat-label">รายได้</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon blue">📋</div>
+        <div class="stat-info">
+          <div class="stat-value" id="stat-orders">0</div>
+          <div class="stat-label">คำสั่งซื้อ</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon green">✅</div>
+        <div class="stat-info">
+          <div class="stat-value" id="stat-delivered">0</div>
+          <div class="stat-label">ส่งแล้ว</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon yellow">⏳</div>
+        <div class="stat-info">
+          <div class="stat-value" id="stat-pending">0</div>
+          <div class="stat-label">รอดำเนินการ</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Main Grid ── -->
+    <div class="dashboard-grid">
+
+      <!-- LEFT: Revenue Chart + Recent Orders -->
+      <div style="display:flex;flex-direction:column;gap:20px">
+
+        <!-- Revenue Bar Chart -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">📈 รายได้ตามวัน</h3>
+          </div>
+          <div id="revenue-chart" class="revenue-bar-wrap">
+            <div class="loading-wrap" style="padding:30px"><div class="spinner"></div></div>
+          </div>
+        </div>
+
+        <!-- Recent Orders -->
+        <div class="card" style="padding:0">
+          <div class="card-header" style="padding:20px 20px 0">
+            <h3 class="card-title">🕐 คำสั่งซื้อล่าสุด</h3>
+            <a href="admin.html" style="font-size:0.8rem;color:var(--primary);font-weight:600">ดูทั้งหมด →</a>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th style="padding-left:20px">หมายเลข</th>
+                  <th>ลูกค้า</th>
+                  <th>ยอด</th>
+                  <th>สถานะ</th>
+                </tr>
+              </thead>
+              <tbody id="recent-orders-tbody">
+                <tr><td colspan="4" style="text-align:center;padding:30px;color:var(--text-muted)">กำลังโหลด…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT: Best Sellers + Donut -->
+      <div style="display:flex;flex-direction:column;gap:20px">
+
+        <!-- Order Status Donut -->
+        <div class="card" style="text-align:center">
+          <div class="card-header">
+            <h3 class="card-title">🍩 สัดส่วนสถานะ</h3>
+          </div>
+          <div class="donut-wrap">
+            <canvas id="donut-canvas" width="160" height="160"></canvas>
+            <div class="donut-center">
+              <div class="donut-center-value" id="donut-total">0</div>
+              <div class="donut-center-label">คำสั่งซื้อ</div>
+            </div>
+          </div>
+          <div id="donut-legend" style="margin-top:16px;display:flex;flex-direction:column;gap:6px;text-align:left"></div>
+        </div>
+
+        <!-- Best Sellers -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">🏆 ขายดีที่สุด</h3>
+          </div>
+          <div id="bestseller-list" class="bestseller-list">
+            <div class="loading-wrap" style="padding:20px"><div class="spinner"></div></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── Toast ── -->
+<div id="toast-container" class="toast-container"></div>
+
+<!-- ── Scripts ── -->
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="config.js"></script>
+<script>
+/* ── dashboard.js (inline) ── */
+
+let allDashOrders = [];
+let currentPeriod = "today";
+
+document.addEventListener("DOMContentLoaded", async () => {
+  // Set date label
+  document.getElementById("dash-date").textContent =
+    new Date().toLocaleDateString("th-TH", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+
+  await initDashAuth();
+  await loadDashData();
+});
+
+async function initDashAuth() {
+  try {
+    await liff.init({ liffId: CONFIG.LIFF_ID });
+    if (!liff.isLoggedIn()) { liff.login({ redirectUri: location.href }); return; }
+    const profile = await liff.getProfile();
+    document.getElementById("dash-name").textContent = profile.displayName;
+    document.getElementById("dash-avatar").innerHTML = `<img src="${profile.pictureUrl}" alt="avatar">`;
+  } catch (err) {
+    console.warn("LIFF:", err);
+  }
+}
+
+async function loadDashData() {
+  try {
+    const res  = await fetch(`${CONFIG.GAS_URL}?action=getOrders`);
+    const data = await res.json();
+    allDashOrders = data.orders || [];
+    updateDashboard();
+  } catch (err) {
+    console.error("loadDashData error:", err);
+    showDashToast("โหลดข้อมูลไม่สำเร็จ", "error");
+  }
+}
+
+function setPeriod(period, btn) {
+  currentPeriod = period;
+  document.querySelectorAll(".period-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  updateDashboard();
+}
+
+function filterByPeriod(orders) {
+  const now  = new Date();
+  const cutoff = new Date();
+
+  if (currentPeriod === "today") {
+    cutoff.setHours(0, 0, 0, 0);
+  } else if (currentPeriod === "week") {
+    cutoff.setDate(now.getDate() - 7);
+  } else {
+    cutoff.setDate(now.getDate() - 30);
+  }
+
+  return orders.filter(o => {
+    try { return new Date(o.timestamp) >= cutoff; } catch { return true; }
+  });
+}
+
+function updateDashboard() {
+  const filtered = filterByPeriod(allDashOrders);
+  updateStats(filtered);
+  updateRevenueChart(filtered);
+  updateRecentOrders(filtered);
+  updateBestSellers(filtered);
+  updateDonut(filtered);
+}
+
+function updateStats(orders) {
+  const revenue  = orders.filter(o => o.status === "delivered")
+                         .reduce((s, o) => s + Number(o.total || 0), 0);
+  const delivered = orders.filter(o => o.status === "delivered").length;
+  const pending   = orders.filter(o => ["pending","confirmed","cooking","ready"].includes(o.status)).length;
+
+  animateNumber("stat-revenue",  revenue,   v => `฿${v.toLocaleString()}`);
+  animateNumber("stat-orders",   orders.length);
+  animateNumber("stat-delivered", delivered);
+  animateNumber("stat-pending",  pending);
+}
+
+function animateNumber(id, target, formatter = v => v) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const start = 0;
+  const duration = 800;
+  const startTime = performance.now();
+  function update(now) {
+    const progress = Math.min((now - startTime) / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    el.textContent = formatter(Math.round(start + (target - start) * eased));
+    if (progress < 1) requestAnimationFrame(update);
+  }
+  requestAnimationFrame(update);
+}
+
+function updateRevenueChart(orders) {
+  const wrap = document.getElementById("revenue-chart");
+
+  // Group by day (last 7 days)
+  const days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    days.push(d);
+  }
+
+  const byDay = days.map(day => {
+    const label = day.toLocaleDateString("th-TH", { weekday: "short" });
+    const total = orders
+      .filter(o => {
+        try {
+          const od = new Date(o.timestamp);
+          return od.toDateString() === day.toDateString() && o.status === "delivered";
+        } catch { return false; }
+      })
+      .reduce((s, o) => s + Number(o.total || 0), 0);
+    return { label, total };
+  });
+
+  const max = Math.max(...byDay.map(d => d.total), 1);
+
+  wrap.innerHTML = byDay.map(d => `
+    <div class="revenue-bar-row">
+      <div class="revenue-bar-label">${d.label}</div>
+      <div class="revenue-bar-track">
+        <div class="revenue-bar-fill" style="width:${(d.total / max * 100).toFixed(1)}%"></div>
+      </div>
+      <div class="revenue-bar-val">฿${d.total.toLocaleString()}</div>
+    </div>
+  `).join("");
+}
+
+function updateRecentOrders(orders) {
+  const tbody = document.getElementById("recent-orders-tbody");
+  const recent = [...orders].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 8);
+
+  if (!recent.length) {
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:30px;color:var(--text-muted)">ยังไม่มีคำสั่งซื้อ</td></tr>`;
+    return;
+  }
+
+  const statusMap = {
+    pending:   ["badge-warning",  "⏳ รอ"],
+    confirmed: ["badge-info",     "✅ ยืนยัน"],
+    cooking:   ["badge-warning",  "🍳 ทำ"],
+    ready:     ["badge-success",  "🎉 พร้อม"],
+    delivered: ["badge-gray",     "📦 ส่งแล้ว"],
+    cancelled: ["badge-danger",   "❌ ยกเลิก"],
+  };
+
+  tbody.innerHTML = recent.map(o => {
+    const [cls, label] = statusMap[o.status] || ["badge-gray", o.status];
+    return `<tr>
+      <td style="padding-left:20px"><span class="font-bold">#${o.orderId}</span></td>
+      <td style="font-size:0.8rem">${o.userName || "-"}</td>
+      <td class="font-bold" style="color:var(--primary)">฿${Number(o.total).toLocaleString()}</td>
+      <td><span class="badge ${cls}">${label}</span></td>
+    </tr>`;
+  }).join("");
+}
+
+function updateBestSellers(orders) {
+  const wrap = document.getElementById("bestseller-list");
+
+  // Count item sales
+  const countMap = {};
+  orders.forEach(o => {
+    let items = [];
+    try { items = JSON.parse(o.items || "[]"); } catch {}
+    items.forEach(item => {
+      if (!countMap[item.name]) countMap[item.name] = { name: item.name, image: item.image || "", count: 0 };
+      countMap[item.name].count += item.qty;
+    });
+  });
+
+  const sorted = Object.values(countMap).sort((a, b) => b.count - a.count).slice(0, 5);
+  const maxCount = sorted[0]?.count || 1;
+
+  if (!sorted.length) {
+    wrap.innerHTML = `<div class="empty-state" style="padding:20px"><div class="empty-icon">🍽️</div><p>ยังไม่มีข้อมูล</p></div>`;
+    return;
+  }
+
+  wrap.innerHTML = sorted.map((item, i) => `
+    <div class="bestseller-item">
+      <div class="bs-rank ${i < 3 ? 'top' : ''}">${i + 1}</div>
+      <div class="bs-img">
+        ${item.image ? `<img src="${item.image}" alt="${item.name}" loading="lazy">` : "🍴"}
+      </div>
+      <div class="bs-info">
+        <div class="bs-name">${item.name}</div>
+        <div class="bs-count">${item.count} ออเดอร์</div>
+      </div>
+      <div class="bs-bar-wrap">
+        <div class="bs-bar">
+          <div class="bs-bar-fill" style="width:${(item.count / maxCount * 100).toFixed(1)}%"></div>
+        </div>
+      </div>
+    </div>
+  `).join("");
+}
+
+function updateDonut(orders) {
+  const canvas = document.getElementById("donut-canvas");
+  const legend = document.getElementById("donut-legend");
+  if (!canvas) return;
+
+  const statusGroups = {
+    pending:   { label: "⏳ รอยืนยัน",  color: "#F39C12" },
+    cooking:   { label: "🍳 กำลังทำ",   color: "#FF6B35" },
+    ready:     { label: "🎉 พร้อมส่ง",  color: "#3498DB" },
+    delivered: { label: "📦 ส่งแล้ว",   color: "#2ECC71" },
+    cancelled: { label: "❌ ยกเลิก",    color: "#E74C3C" },
+  };
+
+  const counts = {};
+  orders.forEach(o => {
+    const grp = ["confirmed"].includes(o.status) ? "pending" : o.status;
+    counts[grp] = (counts[grp] || 0) + 1;
+  });
+
+  const total = Object.values(counts).reduce((s, v) => s + v, 0);
+  document.getElementById("donut-total").textContent = total;
+
+  const ctx  = canvas.getContext("2d");
+  const cx   = 80; const cy = 80;
+  const R    = 66; const r  = 44;
+  ctx.clearRect(0, 0, 160, 160);
+
+  if (!total) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, 0, Math.PI * 2);
+    ctx.arc(cx, cy, r, 0, Math.PI * 2, true);
+    ctx.fillStyle = "#F0E6DC";
+    ctx.fill("evenodd");
+  } else {
+    let startAngle = -Math.PI / 2;
+    const segments = Object.entries(counts).map(([key, count]) => ({
+      key, count,
+      color: statusGroups[key]?.color || "#ccc",
+      label: statusGroups[key]?.label || key,
+    }));
+
+    segments.forEach(seg => {
+      const angle = (seg.count / total) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, R, startAngle, startAngle + angle);
+      ctx.arc(cx, cy, r, startAngle + angle, startAngle, true);
+      ctx.fillStyle = seg.color;
+      ctx.fill();
+      startAngle += angle;
+    });
+
+    legend.innerHTML = segments.map(seg => `
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="width:10px;height:10px;border-radius:2px;background:${seg.color};flex-shrink:0"></div>
+        <span style="font-size:0.78rem;color:var(--text-secondary)">${seg.label}</span>
+        <span style="margin-left:auto;font-size:0.78rem;font-weight:700">${seg.count}</span>
+      </div>
+    `).join("");
+  }
+}
+
+function showDashToast(msg, type = "info") {
+  const container = document.getElementById("toast-container");
+  if (!container) return;
+  const toast = document.createElement("div");
+  toast.className = `toast ${type}`;
+  const icons = { success: "✅", error: "❌", warning: "⚠️", info: "ℹ️" };
+  toast.innerHTML = `<span>${icons[type]}</span><span>${msg}</span>`;
+  container.appendChild(toast);
+  setTimeout(() => toast.remove(), 3500);
+}
+</script>
+</body>
+</html>
